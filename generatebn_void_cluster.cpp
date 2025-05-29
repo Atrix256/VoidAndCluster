@@ -217,7 +217,7 @@ static void SaveInitialPoints(const std::vector<size_t>& ranks, size_t width, bo
     );
 
     // Make images with different point counts
-    static const size_t c_numOutputImages = 10;
+    static const size_t c_numOutputImages = 100;
     for (size_t imageIndex = 1; imageIndex <= c_numOutputImages; ++imageIndex)
     {
         std::vector<unsigned char> pixels(width * width, 255);
@@ -358,7 +358,80 @@ static void Phase1(std::vector<bool>& binaryPattern, std::vector<float>& LUT, st
 {
     ScopedTimer timer("Phase 1", false);
 
+#if 1
     // count how many ones there are
+    struct P
+    {
+        size_t x;
+        size_t y;
+    };
+    std::vector<P> points;
+    for (size_t i = 0; i < binaryPattern.size(); ++i)
+    {
+        if (binaryPattern[i])
+            points.push_back({ i % width, i / width });
+    }
+
+    // Shuffling will break patterns and ties better
+    std::shuffle(points.begin(), points.end(), rng);
+
+    // Use a "mitchell's worst candidate" to make a sequence out of the initial binary pattern
+    std::vector<float> pointScores(points.size());
+    size_t startingPoints = points.size();
+    while (!points.empty())
+    {
+        printf("\r%i%%", int(100.0f * (1.0f - float(points.size()) / float(startingPoints))));
+
+        // score the points. Score = distance to closest other point.
+        #pragma omp parallel for
+        for (int srcPointIndex = 0; srcPointIndex < (int)points.size(); ++srcPointIndex)
+        {
+            const P& srcPoint = points[srcPointIndex];
+            float minDist = FLT_MAX;
+
+            for (int destPointIndex = 0; destPointIndex < (int)points.size(); ++destPointIndex)
+            {
+                if (srcPointIndex == destPointIndex)
+                    continue;
+
+                const P& destPoint = points[destPointIndex];
+
+                // Calculate toroidal distance. Closest distance is the score
+                size_t dx = (srcPoint.x >= destPoint.x) ? srcPoint.x - destPoint.x : destPoint.x - srcPoint.x;
+                if (dx > width / 2)
+                    dx = width - dx;
+
+                size_t dy = (srcPoint.y >= destPoint.y) ? srcPoint.y - destPoint.y : destPoint.y - srcPoint.y;
+                if (dy > width / 2)
+                    dy = width - dy;
+
+                float distance = std::sqrt(float(dx) * float(dx) + float(dy) * float(dy));
+                minDist = std::min(minDist, distance);
+            }
+
+            pointScores[srcPointIndex] = minDist;
+        }
+
+        // Find the worst scoring point
+        float worstPointScore = FLT_MAX;
+        size_t worstPointIndex = 0;
+        for (int pointIndex = 0; pointIndex < (int)points.size(); ++pointIndex)
+        {
+            if (pointScores[pointIndex] >= worstPointScore)
+                continue;
+
+            worstPointScore = pointScores[pointIndex];
+            worstPointIndex = pointIndex;
+        }
+
+        // Remove the point with the lowest score, as the next point
+        const P& worstP = points[worstPointIndex];
+        binaryPattern[worstP.y * width + worstP.x] = false;
+        ranks[worstP.y * width + worstP.x] = points.size();
+        points.erase(points.begin() + worstPointIndex);
+    }
+    printf("\n");
+#else
     size_t ones = 0;
     for (bool b : binaryPattern)
     {
@@ -385,6 +458,7 @@ static void Phase1(std::vector<bool>& binaryPattern, std::vector<float>& LUT, st
         #endif
     }
     printf("\n");
+#endif
 }
 
 struct Point
