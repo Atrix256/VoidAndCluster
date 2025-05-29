@@ -183,6 +183,71 @@ static void MakeLUT(const std::vector<bool>& binaryPattern, std::vector<float>& 
     }
 }
 
+#if SAVE_VOIDCLUSTER_INITIALPOINTS()
+static bool FileExists(const char* fileName)
+{
+    FILE* file = nullptr;
+    fopen_s(&file, fileName, "rb");
+    if (!file)
+        return false;
+    fclose(file);
+    return true;
+}
+
+static void SaveInitialPoints(const std::vector<size_t>& ranks, size_t width, bool useMitchellsBestCandidate)
+{
+    struct IndexRank
+    {
+        size_t index;
+        size_t rank;
+    };
+
+    // gather the pixels that are set
+    std::vector<IndexRank> indexRanks;
+    for (size_t index = 0; index < ranks.size(); ++index)
+        if (ranks[index] != ~size_t(0))
+            indexRanks.push_back({ index, ranks[index] });
+
+    // Sort them by rank
+    std::sort(indexRanks.begin(), indexRanks.end(),
+        [] (const IndexRank& A, const IndexRank& B)
+        {
+            return A.rank < B.rank;
+        }
+    );
+
+    // Make images with different point counts
+    static const size_t c_numOutputImages = 10;
+    for (size_t imageIndex = 1; imageIndex <= c_numOutputImages; ++imageIndex)
+    {
+        std::vector<unsigned char> pixels(width * width, 255);
+
+        size_t targetPointCount = indexRanks.size();
+        if (imageIndex < c_numOutputImages)
+            targetPointCount = targetPointCount * imageIndex / c_numOutputImages;
+
+        for (size_t indexRank = 0; indexRank < targetPointCount; ++indexRank)
+            pixels[indexRanks[indexRank].index] = 0;
+
+        int fileIndex = 0;
+        while (1)
+        {
+            char fileName[256];
+            sprintf_s(fileName, "debug/initial_%s_%i.png", useMitchellsBestCandidate ? "MBC" : "Reg", fileIndex);
+            fileIndex++;
+
+            if (!FileExists(fileName))
+            {
+                stbi_write_png(fileName, (int)width, (int)width, 1, pixels.data(), 0);
+                break;
+            }
+        }
+    }
+
+    // Could also save out a 16 bit image (R,G have bits, B = 0, A = 1) of the rank
+}
+#endif
+
 #if SAVE_VOIDCLUSTER_INITIALBP()
 
 static void SaveBinaryPattern(const std::vector<bool>& binaryPattern, size_t width, const char* baseFileName, int iterationCount, int tightestClusterX, int tightestClusterY, int largestVoidX, int largestVoidY)
@@ -238,7 +303,7 @@ static void MakeInitialBinaryPattern(std::vector<bool>& binaryPattern, size_t wi
 {
     ScopedTimer timer("Initial Pattern", false);
 
-    std::uniform_int_distribution<size_t> dist(0, width*width);
+    std::uniform_int_distribution<size_t> dist(0, width * width - 1);
 
     std::vector<float> LUT;
     LUT.resize(width*width, 0.0f);
@@ -565,6 +630,10 @@ void GenerateBN_Void_Cluster(std::vector<uint8_t>& blueNoise, size_t width, bool
 
         //SaveBinaryPattern(initialBinaryPattern, width, "out/_blah", 0, -1, -1, -1, -1);
     }
+
+    #if SAVE_VOIDCLUSTER_INITIALPOINTS()
+    SaveInitialPoints(ranks, width, useMitchellsBestCandidate);
+    #endif
 
     // Phase 2: Start with initial binary pattern and add points to the largest void until half the pixels are white, entering ranks for those pixels
     binaryPattern = initialBinaryPattern;

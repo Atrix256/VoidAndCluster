@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <stdint.h>
+#include <direct.h>
 
 #include "convert.h"
 #include "histogram.h"
@@ -51,6 +52,9 @@ void TestMask(const std::vector<uint8_t>& noise, size_t noiseSize, const char* b
 void TestNoise(const std::vector<uint8_t>& noise, size_t noiseSize, const char* baseFileName)
 {
     char fileName[256];
+    sprintf(fileName, "%s.noise.png", baseFileName);
+    stbi_write_png(fileName, int(noiseSize), int(noiseSize), 1, noise.data(), 0);
+
     sprintf(fileName, "%s.histogram.csv", baseFileName);
 
     WriteHistogram(noise, fileName);
@@ -70,6 +74,9 @@ void TestNoise(const std::vector<uint8_t>& noise, size_t noiseSize, const char* 
 
 int main(int argc, char** argv)
 {
+    _mkdir("out");
+    _mkdir("debug");
+
     // generate blue noise using void and cluster
     {
         static size_t c_width = 256;
