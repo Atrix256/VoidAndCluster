@@ -676,7 +676,7 @@ static void Phase3(std::vector<bool>& binaryPattern, std::vector<float>& LUT, st
     printf("\n");
 }
 
-void GenerateBN_Void_Cluster(std::vector<uint8_t>& blueNoise, size_t width, float sigma, InitialPointSetModes initialPointSetMode, const char* baseFileName)
+void GenerateBN_Void_Cluster(std::vector<uint8_t>& blueNoise8, std::vector<uint8_t>& blueNoise16, size_t width, float sigma, InitialPointSetModes initialPointSetMode, const char* baseFileName)
 {
     std::mt19937 rng(GetRNGSeed());
 
@@ -724,8 +724,21 @@ void GenerateBN_Void_Cluster(std::vector<uint8_t>& blueNoise, size_t width, floa
     // convert to U8
     {
         ScopedTimer timer("Converting to U8", false);
-        blueNoise.resize(width*width);
+        blueNoise8.resize(width*width);
         for (size_t index = 0; index < width*width; ++index)
-            blueNoise[index] = uint8_t(ranks[index] * 256 / (width*width));
+            blueNoise8[index] = uint8_t(ranks[index] * 256 / (width*width));
+    }
+
+    // convert to U16
+    {
+        ScopedTimer timer("Converting to U16", false);
+        blueNoise16.resize(width * width * 2);
+        for (size_t index = 0; index < width * width; ++index)
+        {
+            uint16_t value = uint16_t(ranks[index] * 65536 / (width * width));
+
+            blueNoise16[index * 2 + 0] = value >> 8;
+            blueNoise16[index * 2 + 1] = value & 255;
+        }
     }
 }

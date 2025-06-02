@@ -21,4 +21,4 @@ inline const char* ToString(InitialPointSetModes mode)
 }
 
 // http://cv.ulichney.com/papers/1993-void-cluster.pdf
-void GenerateBN_Void_Cluster(std::vector<uint8_t>& blueNoise, size_t width, float sigma, InitialPointSetModes initialPointSetMode, const char* baseFileName);
+void GenerateBN_Void_Cluster(std::vector<uint8_t>& blueNoise8, std::vector<uint8_t>& blueNoise16, size_t width, float sigma, InitialPointSetModes initialPointSetMode, const char* baseFileName);

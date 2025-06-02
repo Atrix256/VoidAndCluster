@@ -49,27 +49,30 @@ void TestMask(const std::vector<uint8_t>& noise, size_t noiseSize, const char* b
     }
 }
 
-void TestNoise(const std::vector<uint8_t>& noise, size_t noiseSize, const char* baseFileName)
+void TestNoise(const std::vector<uint8_t>& noise8, const std::vector<uint8_t>& noise16, size_t noiseSize, const char* baseFileName)
 {
     char fileName[256];
     sprintf(fileName, "%s.noise.png", baseFileName);
-    stbi_write_png(fileName, int(noiseSize), int(noiseSize), 1, noise.data(), 0);
+    stbi_write_png(fileName, int(noiseSize), int(noiseSize), 1, noise8.data(), 0);
+
+    sprintf(fileName, "%s.noise.16b.png", baseFileName);
+    stbi_write_png(fileName, int(noiseSize), int(noiseSize), 2, noise16.data(), 0);
 
     sprintf(fileName, "%s.histogram.csv", baseFileName);
 
-    WriteHistogram(noise, fileName);
+    WriteHistogram(noise8, fileName);
     std::vector<uint8_t> noiseDFT;
-    DFT(noise, noiseDFT, noiseSize);
+    DFT(noise8, noiseDFT, noiseSize);
 
     std::vector<uint8_t> noiseAndDFT;
     size_t noiseAndDFT_width = 0;
     size_t noiseAndDFT_height = 0;
-    AppendImageHorizontal(noise, noiseSize, noiseSize, noiseDFT, noiseSize, noiseSize, noiseAndDFT, noiseAndDFT_width, noiseAndDFT_height);
+    AppendImageHorizontal(noise8, noiseSize, noiseSize, noiseDFT, noiseSize, noiseSize, noiseAndDFT, noiseAndDFT_width, noiseAndDFT_height);
 
     sprintf(fileName, "%s.png", baseFileName);
     stbi_write_png(fileName, int(noiseAndDFT_width), int(noiseAndDFT_height), 1, noiseAndDFT.data(), 0);
 
-    TestMask(noise, noiseSize, baseFileName);
+    TestMask(noise8, noiseSize, baseFileName);
 }
 
 int main(int argc, char** argv)
@@ -79,20 +82,21 @@ int main(int argc, char** argv)
 
     // generate blue noise using void and cluster
     {
-        static const size_t c_width = 128;
+        static const size_t c_width = 256;
         static const float  c_sigma = 1.9f;
         static const InitialPointSetModes c_mode = InitialPointSetModes::MBC;
 
         char baseFileName[1024];
         sprintf(baseFileName, "out/VNC_%i_%i_%s", (int)c_width, int(c_sigma * 10.0f), ToString(c_mode));
 
-        std::vector<uint8_t> noise;
+        std::vector<uint8_t> noise8;
+        std::vector<uint8_t> noise16;
         {
             ScopedTimer timer("Blue noise by void and cluster");
-            GenerateBN_Void_Cluster(noise, c_width, c_sigma, c_mode, baseFileName);
+            GenerateBN_Void_Cluster(noise8, noise16, c_width, c_sigma, c_mode, baseFileName);
         }
 
-        TestNoise(noise, c_width, baseFileName);
+        TestNoise(noise8, noise16, c_width, baseFileName);
     }
 
     /*
