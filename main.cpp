@@ -79,18 +79,23 @@ int main(int argc, char** argv)
 
     // generate blue noise using void and cluster
     {
-        static size_t c_width = 256;
+        static const size_t c_width = 128;
+        static const float  c_sigma = 1.0f;
+        static const InitialPointSetModes c_mode = InitialPointSetModes::Standard;
+
+        char baseFileName[1024];
+        sprintf(baseFileName, "out/VNC_%i_%i_%s", (int)c_width, int(c_sigma * 10.0f), ToString(c_mode));
 
         std::vector<uint8_t> noise;
-
         {
             ScopedTimer timer("Blue noise by void and cluster");
-            GenerateBN_Void_Cluster(noise, c_width, false, "out/blueVC_1");
+            GenerateBN_Void_Cluster(noise, c_width, c_sigma, c_mode, baseFileName);
         }
 
-        TestNoise(noise, c_width, "out/blueVC_1");
+        TestNoise(noise, c_width, baseFileName);
     }
 
+    /*
     // generate blue noise using void and cluster but using mitchell's best candidate instead of initial binary pattern and phase 1
     {
         static size_t c_width = 256;
@@ -124,6 +129,7 @@ int main(int argc, char** argv)
 
         TestNoise(noise, width, "out/blueVC_2");
     }
+    */
 
     system("pause");
 
