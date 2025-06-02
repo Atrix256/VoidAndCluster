@@ -80,8 +80,8 @@ int main(int argc, char** argv)
     // generate blue noise using void and cluster
     {
         static const size_t c_width = 128;
-        static const float  c_sigma = 1.0f;
-        static const InitialPointSetModes c_mode = InitialPointSetModes::Standard;
+        static const float  c_sigma = 1.9f;
+        static const InitialPointSetModes c_mode = InitialPointSetModes::MBC;
 
         char baseFileName[1024];
         sprintf(baseFileName, "out/VNC_%i_%i_%s", (int)c_width, int(c_sigma * 10.0f), ToString(c_mode));
